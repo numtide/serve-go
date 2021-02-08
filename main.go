@@ -23,7 +23,6 @@ func (fs SPAFileSystem) Open(name string) (http.File, error) {
 func run() error {
 	var (
 		workDir string
-		err     error
 		port    int = 3000
 	)
 
@@ -33,17 +32,18 @@ func run() error {
 	if flag.NArg() > 0 {
 		workDir = flag.Arg(0)
 	} else {
-		workDir, err = os.Getwd()
-		if err != nil {
-			return err
-		}
+		workDir = "."
 	}
 
 	fs := SPAFileSystem{http.Dir(workDir)}
 
 	h := http.FileServer(fs)
 
-	return http.ListenAndServe(fmt.Sprintf(":%d", port), h)
+	addr := fmt.Sprintf(":%d", port)
+
+	fmt.Printf("Serving %s on %s\n", workDir, addr)
+
+	return http.ListenAndServe(addr, h)
 }
 
 func main() {
