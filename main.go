@@ -7,6 +7,25 @@ import (
 	"os"
 )
 
+var (
+	workDir string
+	port    int = 3000
+)
+
+func init() {
+	flag.Usage = usage
+}
+
+func usage() {
+	out := flag.CommandLine.Output()
+
+	fmt.Fprintf(out, "dead-simple application that serves static files from the current directory\n")
+	fmt.Fprintf(out, "Usage: serve-go [options] [<work-dir>]\n\n")
+	fmt.Fprintf(out, "Options:\n")
+	fmt.Fprintf(out, "  -listen: Port to listen to (default %d)\n", port)
+	fmt.Fprintf(out, "  <work-dir>: Folder to serve (default to current directory)\n")
+}
+
 type SPAFileSystem struct {
 	http.FileSystem
 }
@@ -21,11 +40,6 @@ func (fs SPAFileSystem) Open(name string) (http.File, error) {
 }
 
 func run() error {
-	var (
-		workDir string
-		port    int = 3000
-	)
-
 	flag.IntVar(&port, "listen", port, "Port to listen to")
 	flag.Parse()
 
