@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+
+	"github.com/numtide/serve-go/spa"
 )
 
 var (
@@ -51,7 +53,7 @@ func run() error {
 
 	fs := SPAFileSystem{http.Dir(workDir)}
 
-	h := http.FileServer(fs)
+	h := spa.FileServer(fs)
 
 	addr := fmt.Sprintf(":%d", port)
 
