@@ -29,11 +29,16 @@ const sniffLen = 512
 // all of the byte-range-spec values is greater than the content size.
 var errNoOverlap = errors.New("invalid range: failed to overlap")
 
+func hasFile(fs http.FileSystem, name string) bool {
+	f, err := fs.Open(name)
+	f.Close()
+	return err == nil
+}
+
 // if name is empty, filename is unknown. (used for mime type, before sniffing)
 // if modtime.IsZero(), modtime is unknown.
 // content must be seeked to the beginning of the file.
-// The sizeFunc is called at most once. Its error, if any, is sent in the HTTP response.
-func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime time.Time, sizeFunc func() (int64, error), content io.ReadSeeker) {
+func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime time.Time, size int64, content io.ReadSeeker, fs http.FileSystem) {
 	setLastModified(w, modtime)
 	done, rangeReq := checkPreconditions(w, r, modtime)
 	if done {
@@ -64,10 +69,31 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 		ctype = ctypes[0]
 	}
 
-	size, err := sizeFunc()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	// Now that we have set the content-encoding, find compressed files if they exist.
+	//
+	// brotli: .br
+	// gzip:   .gz
+	//
+	hasContentEncoding := false
+	if !hasContentEncoding && acceptEncoding(r, "br") {
+		f, err := fs.Open(name + ".br")
+		if err == nil {
+			// assume stat would work, we just opened the file
+			d, _ := f.Stat()
+			content, size = f, d.Size()
+			w.Header().Set("Content-Encoding", "br")
+			hasContentEncoding = true
+		}
+	}
+	if !hasContentEncoding && acceptEncoding(r, "gzip") {
+		f, err := fs.Open(name + ".gz")
+		if err == nil {
+			// assume stat would work, we just opened the file
+			d, _ := f.Stat()
+			content, size = f, d.Size()
+			w.Header().Set("Content-Encoding", "gzip")
+			hasContentEncoding = true
+		}
 	}
 
 	// handle Content-Range header.
@@ -334,6 +360,18 @@ func checkIfRange(w http.ResponseWriter, r *http.Request, modtime time.Time) con
 	return condFalse
 }
 
+// accept-encoding: gzip, deflate, br
+func acceptEncoding(r *http.Request, encoding string) bool {
+	encodings := r.Header.Get("Accept-Encoding")
+	for _, item := range strings.Split(encodings, ",") {
+		item = textproto.TrimString(item)
+		if item == encoding {
+			return true
+		}
+	}
+	return false
+}
+
 var unixEpochTime = time.Unix(0, 0)
 
 // isZeroTime reports whether t is obviously unspecified (either zero or Unix()=0).
@@ -480,8 +518,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, hfs http.FileSystem, name
 	}
 
 	// serveContent will check modification time
-	sizeFunc := func() (int64, error) { return d.Size(), nil }
-	serveContent(w, r, d.Name(), d.ModTime(), sizeFunc, f)
+	serveContent(w, r, d.Name(), d.ModTime(), d.Size(), f, hfs)
 }
 
 // toHTTPError returns a non-specific HTTP error message and status code
