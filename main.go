@@ -28,19 +28,6 @@ func usage() {
 	fmt.Fprintf(out, "  <work-dir>: Folder to serve (default to current directory)\n")
 }
 
-type SPAFileSystem struct {
-	http.FileSystem
-}
-
-func (fs SPAFileSystem) Open(name string) (http.File, error) {
-	file, err := fs.FileSystem.Open(name)
-	if err != nil && os.IsNotExist(err) {
-		// Fallback to index.html if the file doesn't exist
-		return fs.FileSystem.Open("index.html")
-	}
-	return file, err
-}
-
 func run() error {
 	flag.IntVar(&port, "listen", port, "Port to listen to")
 	flag.Parse()
@@ -51,7 +38,7 @@ func run() error {
 		workDir = "."
 	}
 
-	fs := SPAFileSystem{http.Dir(workDir)}
+	fs := http.Dir(workDir)
 
 	h := spa.FileServer(fs)
 

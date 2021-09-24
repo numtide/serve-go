@@ -398,7 +398,7 @@ func checkPreconditions(w http.ResponseWriter, r *http.Request, modtime time.Tim
 }
 
 // name is '/'-separated, not filepath.Separator.
-func serveFile(w http.ResponseWriter, r *http.Request, fs http.FileSystem, name string, redirect bool) {
+func serveFile(w http.ResponseWriter, r *http.Request, hfs http.FileSystem, name string, redirect bool) {
 	const indexPage = "/index.html"
 
 	// redirect .../index.html to .../
@@ -409,7 +409,12 @@ func serveFile(w http.ResponseWriter, r *http.Request, fs http.FileSystem, name 
 		return
 	}
 
-	f, err := fs.Open(name)
+	f, err := hfs.Open(name)
+	// SPA: If the file doesn't exist, assume it's a frontend route and serve the index.html
+	if err != nil && errors.Is(err, fs.ErrNotExist) {
+		name = indexPage
+		f, err = hfs.Open(name)
+	}
 	if err != nil {
 		msg, code := toHTTPError(err)
 		http.Error(w, msg, code)
@@ -451,7 +456,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, fs http.FileSystem, name 
 
 		// use contents of index.html for directory, if present
 		index := strings.TrimSuffix(name, "/") + indexPage
-		ff, err := fs.Open(index)
+		ff, err := hfs.Open(index)
 		if err == nil {
 			defer ff.Close()
 			dd, err := ff.Stat()
