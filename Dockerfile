@@ -1,5 +1,5 @@
 # Build
-FROM golang:1.15-alpine as build
+FROM golang:1.17-alpine as build
 WORKDIR /build
 COPY go.mod *.go /build/
 RUN go build -o serve-go .
