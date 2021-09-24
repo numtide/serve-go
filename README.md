@@ -19,6 +19,14 @@ Options:
 * <work-dir>: Folder to serve (default to current directory)
 ```
 
+## Content Encoding
+
+The server now also handles gzip and brotli content-encoding.
+
+For each file that exists in the work directory, it will also look for a .br
+or .gz file, and if it exists, and the client accepts the encoding, serve that
+file instead of the original one.
+
 ## Example
 
 Here is how to integrate it in a Docker image:
