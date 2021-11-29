@@ -29,12 +29,6 @@ const sniffLen = 512
 // all of the byte-range-spec values is greater than the content size.
 var errNoOverlap = errors.New("invalid range: failed to overlap")
 
-func hasFile(fs http.FileSystem, name string) bool {
-	f, err := fs.Open(name)
-	f.Close()
-	return err == nil
-}
-
 // if name is empty, filename is unknown. (used for mime type, before sniffing)
 // if modtime.IsZero(), modtime is unknown.
 // content must be seeked to the beginning of the file.
@@ -78,6 +72,7 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 	if !hasContentEncoding && acceptEncoding(r, "br") {
 		f, err := fs.Open(name + ".br")
 		if err == nil {
+			defer f.Close()
 			// assume stat would work, we just opened the file
 			d, _ := f.Stat()
 			content, size = f, d.Size()
@@ -88,6 +83,7 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 	if !hasContentEncoding && acceptEncoding(r, "gzip") {
 		f, err := fs.Open(name + ".gz")
 		if err == nil {
+			defer f.Close()
 			// assume stat would work, we just opened the file
 			d, _ := f.Stat()
 			content, size = f, d.Size()
@@ -167,12 +163,15 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 		}
 
 		w.Header().Set("Accept-Ranges", "bytes")
-		if w.Header().Get("Content-Encoding") == "" {
+		// Only set the length if the content-encoding is set inside this function
+		if hasContentEncoding || w.Header().Get("Content-Encoding") == "" {
 			w.Header().Set("Content-Length", strconv.FormatInt(sendSize, 10))
 		}
 	}
 
 	w.WriteHeader(code)
+
+	fmt.Println(name, "code=", code, "size=", sendSize, "ct=", w.Header().Get("Content-Type"), "ce=", w.Header().Get("Content-Encoding"))
 
 	if r.Method != "HEAD" {
 		io.CopyN(w, sendContent, sendSize)
@@ -518,7 +517,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, hfs http.FileSystem, name
 	}
 
 	// serveContent will check modification time
-	serveContent(w, r, d.Name(), d.ModTime(), d.Size(), f, hfs)
+	serveContent(w, r, name, d.ModTime(), d.Size(), f, hfs)
 }
 
 // toHTTPError returns a non-specific HTTP error message and status code
