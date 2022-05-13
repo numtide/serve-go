@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	workDir string
-	port    int = 3000
+	workDir   string
+	port      int    = 3000
+	oEmbedUrl string = os.Getenv("SERVEGO_OEMBED_URL")
 )
 
 func init() {
@@ -25,11 +26,13 @@ func usage() {
 	fmt.Fprintf(out, "Usage: serve-go [options] [<work-dir>]\n\n")
 	fmt.Fprintf(out, "Options:\n")
 	fmt.Fprintf(out, "  -listen: Port to listen to (default %d)\n", port)
+	fmt.Fprintf(out, "  -oembed-url: Sets the oEmbed Link header if set (env: $SERVEGO_OEMBED_URL) (default %s)\n", oEmbedUrl)
 	fmt.Fprintf(out, "  <work-dir>: Folder to serve (default to current directory)\n")
 }
 
 func run() error {
 	flag.IntVar(&port, "listen", port, "Port to listen to")
+	flag.StringVar(&oEmbedUrl, "oembed-url", oEmbedUrl, "Sets the oEmbed Link header if set")
 	flag.Parse()
 
 	if flag.NArg() > 0 {
@@ -41,6 +44,14 @@ func run() error {
 	fs := http.Dir(workDir)
 
 	h := spa.FileServer(fs)
+
+	if oEmbedUrl != "" {
+		var err error
+		h, err = spa.NewOembedMiddleware(h, oEmbedUrl)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	addr := fmt.Sprintf(":%d", port)
 
