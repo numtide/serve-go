@@ -12,11 +12,13 @@ Applications (SPA).
 ## Usage
 
 ```
-Usage: serve [options] [<work-dir>]
+dead-simple application that serves static files from the current directory
+Usage: serve-go [options] [<work-dir>]
 
 Options:
-* -listen: Port to listen to (default 3000)
-* <work-dir>: Folder to serve (default to current directory)
+  -listen: Port to listen to (default 3000)
+  -oembed-url: Sets the oEmbed Link header if set (env: $SERVEGO_OEMBED_URL) (default )
+  <work-dir>: Folder to serve (default to current directory)
 ```
 
 ## Content Encoding
@@ -31,8 +33,8 @@ file instead of the original one.
 
 Here is how to integrate it in a Docker image:
 
-`Dockerfile`
-```
+Dockerfile:
+```dockerfile
 FROM node:15.7.0-alpine3.12 as builder
 WORKDIR /app/
 # Install dependencies
