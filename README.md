@@ -45,7 +45,7 @@ COPY . /app/
 RUN npm run build
 
 # Create a serve container
-FROM numtide/serve-go:1.0.0
+FROM ghcr.io/numtide/serve-go:v1.3.0
 COPY --from=builder /app/build /site
 ```
 
