@@ -1,1 +1,3 @@
 /serve-go
+/.direnv
+/result*
