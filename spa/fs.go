@@ -564,8 +564,10 @@ type fileHandler struct {
 	root http.FileSystem
 }
 
-var errMissingSeek = errors.New("io.File missing Seek method")
-var errMissingReadDir = errors.New("io.File directory missing ReadDir method")
+var (
+	errMissingSeek    = errors.New("io.File missing Seek method")
+	errMissingReadDir = errors.New("io.File directory missing ReadDir method")
+)
 
 // FileServer returns a handler that serves HTTP requests
 // with the contents of the file system rooted at root.

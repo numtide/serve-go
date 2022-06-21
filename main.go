@@ -5,14 +5,18 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/numtide/serve-go/spa"
 )
 
 var (
-	workDir   string
-	port      int    = 3000
-	oEmbedUrl string = os.Getenv("SERVEGO_OEMBED_URL")
+	workDir               string
+	port                  int    = 3000
+	oEmbedUrl             string = os.Getenv("SERVEGO_OEMBED_URL")
+	hstsSeconds           uint64 = 0
+	hstsIncludeSubDomains bool   = false
+	hstsPreload           bool   = false
 )
 
 func init() {
@@ -27,18 +31,41 @@ func usage() {
 	fmt.Fprintf(out, "Options:\n")
 	fmt.Fprintf(out, "  -listen: Port to listen to (default %d)\n", port)
 	fmt.Fprintf(out, "  -oembed-url: Sets the oEmbed Link header if set (env: $SERVEGO_OEMBED_URL) (default %s)\n", oEmbedUrl)
+	fmt.Fprintf(out, "  -hstsSeconds: Sets the HTTP Strict Transport Security max-age header if set (env: $SERVEGO_HSTS_SECONDS) (default %s)\n", hstsSeconds)
+	fmt.Fprintf(out, "  -hstsIncludeSubDomains: Sets the HTTP Strict Transport Security includeSubDmains header if set (env: $SERVEGO_HSTS_INCLUDE_SUBDOMAINS) (default %s)\n", hstsIncludeSubDomains)
+	fmt.Fprintf(out, "  -hstsPreload: Sets the HTTP Strict Transport Security preload header if set (env: $SERVEGO_HSTS_PRELOAD) (default %s)\n", hstsPreload)
 	fmt.Fprintf(out, "  <work-dir>: Folder to serve (default to current directory)\n")
 }
 
 func run() error {
 	flag.IntVar(&port, "listen", port, "Port to listen to")
 	flag.StringVar(&oEmbedUrl, "oembed-url", oEmbedUrl, "Sets the oEmbed Link header if set")
+	flag.Uint64Var(&hstsSeconds, "hstsSeconds", hstsSeconds, "Sets the HTTP Strict Transport Security max-age if set")
+	flag.Bool("hstsIncludeSubDomains", hstsIncludeSubDomains, "Sets the HTTP Strict Transport Security includeSubDomains if set")
+	flag.Bool("hstsPreload", hstsPreload, "Sets the HTTP Strict Transport Security includeSubDomains if set")
 	flag.Parse()
 
 	if flag.NArg() > 0 {
 		workDir = flag.Arg(0)
 	} else {
 		workDir = "."
+	}
+
+	val, ok := os.LookupEnv("SERVEGO_HSTS_SECONDS")
+	if ok {
+		var err error
+		hstsSeconds, err = strconv.ParseUint(val, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+	}
+	_, ok = os.LookupEnv("SERVEGO_HSTS_INCLUDE_SUBDOMAINS")
+	if ok {
+		hstsIncludeSubDomains = true
+	}
+	_, ok = os.LookupEnv("SERVEGO_HSTS_PRELOAD")
+	if ok {
+		hstsPreload = true
 	}
 
 	fs := http.Dir(workDir)
@@ -48,6 +75,14 @@ func run() error {
 	if oEmbedUrl != "" {
 		var err error
 		h, err = spa.NewOembedMiddleware(h, oEmbedUrl)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if hstsSeconds > 0 {
+		var err error
+		h, err = spa.NewHSTSMiddleware(h, hstsSeconds, hstsIncludeSubDomains, hstsPreload)
 		if err != nil {
 			panic(err)
 		}
