@@ -31,9 +31,9 @@ func usage() {
 	fmt.Fprintf(out, "Options:\n")
 	fmt.Fprintf(out, "  -listen: Port to listen to (default %d)\n", port)
 	fmt.Fprintf(out, "  -oembed-url: Sets the oEmbed Link header if set (env: $SERVEGO_OEMBED_URL) (default %s)\n", oEmbedUrl)
-	fmt.Fprintf(out, "  -hstsSeconds: Sets the HTTP Strict Transport Security max-age header if set (env: $SERVEGO_HSTS_SECONDS) (default %s)\n", hstsSeconds)
-	fmt.Fprintf(out, "  -hstsIncludeSubDomains: Sets the HTTP Strict Transport Security includeSubDmains header if set (env: $SERVEGO_HSTS_INCLUDE_SUBDOMAINS) (default %s)\n", hstsIncludeSubDomains)
-	fmt.Fprintf(out, "  -hstsPreload: Sets the HTTP Strict Transport Security preload header if set (env: $SERVEGO_HSTS_PRELOAD) (default %s)\n", hstsPreload)
+	fmt.Fprintf(out, "  -hstsSeconds: Sets the HTTP Strict Transport Security max-age header if larger than 0 (env: $SERVEGO_HSTS_SECONDS) (default %d)\n", hstsSeconds)
+	fmt.Fprintf(out, "  -hstsIncludeSubDomains: Sets the HTTP Strict Transport Security includeSubDomains header if set (env: $SERVEGO_HSTS_INCLUDE_SUBDOMAINS) (default %v)\n", hstsIncludeSubDomains)
+	fmt.Fprintf(out, "  -hstsPreload: Sets the HTTP Strict Transport Security preload header if set (env: $SERVEGO_HSTS_PRELOAD) (default %v)\n", hstsPreload)
 	fmt.Fprintf(out, "  <work-dir>: Folder to serve (default to current directory)\n")
 }
 
