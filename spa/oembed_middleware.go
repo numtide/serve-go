@@ -23,16 +23,7 @@ func (o *OembedMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Prepare the target url
 	targetUrl := cloneUrl(r.URL)
 	targetUrl.Host = r.Host
-
-	scheme := r.Header.Get("X-Forwarded-Proto")
-	if scheme == "" {
-		if r.TLS == nil {
-			scheme = "http"
-		} else {
-			scheme = "https"
-		}
-	}
-	targetUrl.Scheme = scheme
+	targetUrl.Scheme = GetRequestScheme(r)
 
 	// Build the oEmbed URL
 	u := cloneUrl(o.URL)

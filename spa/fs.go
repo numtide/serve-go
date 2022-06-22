@@ -145,15 +145,15 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 				for _, ra := range ranges {
 					part, err := mw.CreatePart(ra.mimeHeader(ctype, size))
 					if err != nil {
-						pw.CloseWithError(err)
+						_ = pw.CloseWithError(err)
 						return
 					}
 					if _, err := content.Seek(ra.start, io.SeekStart); err != nil {
-						pw.CloseWithError(err)
+						_ = pw.CloseWithError(err)
 						return
 					}
 					if _, err := io.CopyN(part, content, ra.length); err != nil {
-						pw.CloseWithError(err)
+						_ = pw.CloseWithError(err)
 						return
 					}
 				}
@@ -174,6 +174,7 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 	fmt.Println(name, "code=", code, "size=", sendSize, "ct=", w.Header().Get("Content-Type"), "ce=", w.Header().Get("Content-Encoding"))
 
 	if r.Method != "HEAD" {
+		// nolint:errcheck
 		io.CopyN(w, sendContent, sendSize)
 	}
 }
@@ -512,6 +513,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, hfs http.FileSystem, name
 			return
 		}
 		setLastModified(w, d.ModTime())
+		// nolint:errcheck
 		w.Write([]byte("directory listing disabled"))
 		return
 	}
@@ -546,26 +548,9 @@ func localRedirect(w http.ResponseWriter, r *http.Request, newPath string) {
 	w.WriteHeader(http.StatusMovedPermanently)
 }
 
-func containsDotDot(v string) bool {
-	if !strings.Contains(v, "..") {
-		return false
-	}
-	for _, ent := range strings.FieldsFunc(v, isSlashRune) {
-		if ent == ".." {
-			return true
-		}
-	}
-	return false
-}
-
-func isSlashRune(r rune) bool { return r == '/' || r == '\\' }
-
 type fileHandler struct {
 	root http.FileSystem
 }
-
-var errMissingSeek = errors.New("io.File missing Seek method")
-var errMissingReadDir = errors.New("io.File directory missing ReadDir method")
 
 // FileServer returns a handler that serves HTTP requests
 // with the contents of the file system rooted at root.
@@ -606,10 +591,10 @@ func (r httpRange) contentRange(size int64) string {
 }
 
 func (r httpRange) mimeHeader(contentType string, size int64) textproto.MIMEHeader {
-	return textproto.MIMEHeader{
-		"Content-Range": {r.contentRange(size)},
-		"Content-Type":  {contentType},
-	}
+	h := make(textproto.MIMEHeader)
+	h.Set("Content-Range", r.contentRange(size))
+	h.Set("Content-Type", contentType)
+	return h
 }
 
 // parseRange parses a Range header string as per RFC 7233.
@@ -702,6 +687,7 @@ func rangesMIMESize(ranges []httpRange, contentType string, contentSize int64) (
 	var w countingWriter
 	mw := multipart.NewWriter(&w)
 	for _, ra := range ranges {
+		// nolint:errcheck
 		mw.CreatePart(ra.mimeHeader(contentType, contentSize))
 		encSize += ra.length
 	}
