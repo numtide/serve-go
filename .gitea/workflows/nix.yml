@@ -1,0 +1,34 @@
+name: Nix
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build:
+    runs-on: nix
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: nix build --log-format bar-with-logs
+
+      - name: Push to cache
+        run: |
+          nix shell --inputs-from . nixpkgs#curl nixpkgs#gnutar nixpkgs#gzip -c bash -c '
+            curl -fsSL "https://github.com/Mic92/niks3/releases/latest/download/niks3_$(uname -s)_$(uname -m).tar.gz" | tar -xzf -
+          '
+          ./niks3 push \
+            --server-url https://niks3.numtide.com \
+            --auth-token "${{ secrets.NIKS3_TOKEN }}" \
+            ./result
+
+      - name: Run lint
+        run: nix develop -c just lint
+
+      - name: Flake check
+        run: nix flake check --log-format bar-with-logs
