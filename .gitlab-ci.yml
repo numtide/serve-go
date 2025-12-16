@@ -1,0 +1,28 @@
+stages:
+  - build
+
+variables:
+  NIX_CONFIG: |
+    extra-substituters = https://cache.numtide.com
+    extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=
+
+build:
+  stage: build
+  image: nixos/nix:latest
+  id_tokens:
+    NIKS3_TOKEN:
+      aud: https://niks3.numtide.com
+  script:
+    - nix build --log-format bar-with-logs --extra-experimental-features "nix-command flakes"
+    - |
+      curl -fsSL "https://github.com/Mic92/niks3/releases/latest/download/niks3_$(uname -s)_$(uname -m).tar.gz" | tar -xzf -
+      ./niks3 push \
+        --server-url https://niks3.numtide.com \
+        --auth-token "$NIKS3_TOKEN" \
+        ./result
+    - nix develop --extra-experimental-features "nix-command flakes" -c just lint
+    - nix flake check --log-format bar-with-logs --extra-experimental-features "nix-command flakes"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
