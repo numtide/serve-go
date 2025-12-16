@@ -22,7 +22,6 @@ let
         zimbatm
         jfroche
       ];
-      platforms = platforms.linux;
     };
   };
   devShell = nixpkgs.mkShellNoCC {
