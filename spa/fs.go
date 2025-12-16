@@ -72,7 +72,7 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 	if !hasContentEncoding && acceptEncoding(r, "br") {
 		f, err := fs.Open(name + ".br")
 		if err == nil {
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 			// assume stat would work, we just opened the file
 			d, _ := f.Stat()
 			content, size = f, d.Size()
@@ -83,7 +83,7 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 	if !hasContentEncoding && acceptEncoding(r, "gzip") {
 		f, err := fs.Open(name + ".gz")
 		if err == nil {
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 			// assume stat would work, we just opened the file
 			d, _ := f.Stat()
 			content, size = f, d.Size()
@@ -140,7 +140,7 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 			mw := multipart.NewWriter(pw)
 			w.Header().Set("Content-Type", "multipart/byteranges; boundary="+mw.Boundary())
 			sendContent = pr
-			defer pr.Close() // cause writing goroutine to fail and exit if CopyN doesn't finish.
+			defer func() { _ = pr.Close() }() // cause writing goroutine to fail and exit if CopyN doesn't finish.
 			go func() {
 				for _, ra := range ranges {
 					part, err := mw.CreatePart(ra.mimeHeader(ctype, size))
@@ -157,8 +157,8 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 						return
 					}
 				}
-				mw.Close()
-				pw.Close()
+				_ = mw.Close()
+				_ = pw.Close()
 			}()
 		}
 
@@ -458,7 +458,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, hfs http.FileSystem, name
 		http.Error(w, msg, code)
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	d, err := f.Stat()
 	if err != nil {
@@ -496,7 +496,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, hfs http.FileSystem, name
 		index := strings.TrimSuffix(name, "/") + indexPage
 		ff, err := hfs.Open(index)
 		if err == nil {
-			defer ff.Close()
+			defer func() { _ = ff.Close() }()
 			dd, err := ff.Stat()
 			if err == nil {
 				name = index
@@ -562,12 +562,11 @@ type fileHandler struct {
 // To use the operating system's file system implementation,
 // use http.Dir:
 //
-//     http.Handle("/", http.FileServer(http.Dir("/tmp")))
+//	http.Handle("/", http.FileServer(http.Dir("/tmp")))
 //
 // To use an fs.FS implementation, use http.FS to convert it:
 //
 //	http.Handle("/", http.FileServer(http.FS(fsys)))
-//
 func FileServer(root http.FileSystem) http.Handler {
 	return &fileHandler{root}
 }
@@ -691,7 +690,7 @@ func rangesMIMESize(ranges []httpRange, contentType string, contentSize int64) (
 		mw.CreatePart(ra.mimeHeader(contentType, contentSize))
 		encSize += ra.length
 	}
-	mw.Close()
+	_ = mw.Close()
 	encSize += int64(w)
 	return
 }

@@ -1,2 +1,4 @@
-{system ? builtins.currentSystem}:
-(import ./. {inherit system;}).devShell
+{
+  system ? builtins.currentSystem,
+}:
+(import ./. { inherit system; }).devShell
