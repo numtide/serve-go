@@ -15,7 +15,7 @@
     {
       name = "serve-go";
       src = ./.;
-      vendorSha256 = null;
+      vendorHash = null;
       meta = with nixpkgs.lib; {
         description = "HTTP web server for SPA";
         homepage = "https://github.com/numtide/serve-go";
