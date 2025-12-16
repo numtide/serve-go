@@ -34,10 +34,11 @@ jobs:
 
       - name: Push to cache
         run: |
-          nix run github:Mic92/niks3 -- push \
+          nix build -o niks3 github:Mic92/niks3
+          niks3/bin/niks3 push \
             --server-url https://niks3.numtide.com \
             --auth-token "${{ steps.oidc.outputs.token }}" \
-            ./result
+            ./result ./niks3
 
       - name: Run lint
         run: nix develop -c just lint
