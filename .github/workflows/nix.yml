@@ -6,39 +6,24 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v6
 
-      - uses: cachix/install-nix-action@v31
-        with:
-          extra_nix_config: |
-            extra-substituters = https://cache.numtide.com
-            extra-trusted-public-keys = niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=
+      - uses: NixOS/nix-installer-action@main
 
-      - name: Get OIDC token
-        id: oidc
-        run: |
-          token=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://niks3.numtide.com" | jq -r '.value')
-          echo "::add-mask::$token"
-          echo "token=$token" >> "$GITHUB_OUTPUT"
+      - uses: Mic92/niks3-action@v1
+        with:
+          server-url: https://niks3.numtide.com
 
       - name: Build
         run: nix build --log-format bar-with-logs
-
-      - name: Push to cache
-        run: |
-          curl -fsSL "https://github.com/Mic92/niks3/releases/latest/download/niks3_$(uname -s)_$(uname -m).tar.gz" | tar -xzf -
-          ./niks3 push \
-            --server-url https://niks3.numtide.com \
-            --auth-token "${{ steps.oidc.outputs.token }}" \
-            ./result
 
       - name: Run lint
         run: nix develop -c just lint
